@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tirumal Account Management</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.png">
+  <meta name="theme-color" content="#4facfe">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tirumal Account">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      background: #ffffff;
+      padding: 35px 30px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 12px 25px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 25px;
+      color: #2c3e50;
+      font-size: 26px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+      text-align: left;
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-weight: bold;
+      display: none;
+    }
+
+    .get-btn {
+      background: #2ecc71;
+      margin-top: 15px;
+    }
+
+    .get-btn:hover {
+      background: #27ae60;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Tirumal Account Management</h2>
+
+    <form id="accountForm">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="name" required>
+      </div>
+
+      <div class="form-group">
+        <label>Account Number</label>
+        <input type="text" id="accountNumber">
+      </div>
+
+      <div class="form-group">
+        <label>Starting Date</label>
+        <input type="date" id="startDate" required>
+      </div>
+
+      <div class="form-group">
+        <label>Ending Date</label>
+        <input type="date" id="endDate" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Plan</label>
+        <select id="plan">
+          <option value="">Select Plan (Optional)</option>
+          <option value="1k">1k</option>
+          <option value="2k">2k</option>
+          <option value="3k">3k</option>
+          <option value="4k">4k</option>
+          <option value="5k">5k</option>
+          <option value="10k">10k</option>
+          <option value="15k">15k</option>
+        </select>
+      </div>
+
+      <button type="submit">Submit</button>
+      <div class="status" id="statusText">Submitting...</div>
+    </form>
+
+    <button class="get-btn" onclick="window.location.href='get.html'">
+      Get Details
+    </button>
+  </div>
+
+  <script>
+    const form = document.getElementById("accountForm");
+    const statusText = document.getElementById("statusText");
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+
+    // Logic to auto-calculate end date when Start Date is selected
+    startDateInput.addEventListener("change", function() {
+      const selectedDate = new Date(this.value);
+      
+      if (!isNaN(selectedDate.getTime())) {
+        let endDate = new Date(selectedDate);
+        
+        // Add 18 months
+        endDate.setMonth(endDate.getMonth() + 18);
+        
+        // Force day to 28th
+        endDate.setDate(28);
+
+        const year = endDate.getFullYear();
+        const month = String(endDate.getMonth() + 1).padStart(2, '0');
+        const day = String(endDate.getDate()).padStart(2, '0');
+        
+        endDateInput.value = `${year}-${month}-${day}`;
+      } else {
+        endDateInput.value = "";
+      }
+    });
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      statusText.style.display = "block";
+      statusText.innerText = "Submitting...";
+
+      const data = {
+        name: document.getElementById("name").value,
+        accountNumber: document.getElementById("accountNumber").value || "N/A",
+        startDate: document.getElementById("startDate").value,
+        endDate: document.getElementById("endDate").value,
+        plan: document.getElementById("plan").value || "None"
+      };
+
+      fetch("https://script.google.com/macros/s/AKfycbzv4ytZz4u-xz1GFJI7r87DvS_6MtV8gyNR1rUpcRlCsQ38sNR1oS3fKfyfd28PU8n2/exec", {
+        method: "POST",
+        body: JSON.stringify(data)
+      })
+      .then(() => {
+        statusText.innerText = "Submitted successfully ✅";
+        form.reset();
+        endDateInput.value = ""; // Clear the readonly field manually
+        setTimeout(() => statusText.style.display = "none", 3000);
+      })
+      .catch(() => {
+        statusText.innerText = "Error while submitting ❌";
+      });
+    });
+  </script>
+</body>
+</html>
