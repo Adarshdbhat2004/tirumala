@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Account Details</title>
   <style>
     body {
@@ -44,6 +46,20 @@
       background: #f1f5f9;
     }
 
+    /* New style for expired accounts */
+    .expired {
+      background-color: #fee2e2 !important; /* Soft light red background */
+    }
+    
+    .expired td {
+      color: #dc2626 !important; /* Bold red text */
+      font-weight: 600;
+    }
+
+    .expired:hover {
+      background: #fca5a5 !important; /* Darker red on hover */
+    }
+
     @media (max-width: 768px) {
       table {
         width: 100%;
@@ -53,7 +69,7 @@
 </head>
 <body>
 
-<h2>Account  Details</h2>
+<h2>Account Details</h2>
 
 <table>
   <thead>
@@ -69,13 +85,27 @@
 </table>
 
 <script>
+// Get today's date set to midnight for clean calculations
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
 fetch("https://script.google.com/macros/s/AKfycbzv4ytZz4u-xz1GFJI7r87DvS_6MtV8gyNR1rUpcRlCsQ38sNR1oS3fKfyfd28PU8n2/exec")
   .then(res => res.json())
   .then(data => {
     let html = "";
+    
     data.forEach(r => {
+      // Parse the End Date from the spreadsheet row
+      const endDate = new Date(r["End Date"]);
+      
+      // Check if the plan is expired (End Date is less than or equal to today)
+      let rowClass = "";
+      if (!isNaN(endDate.getTime()) && endDate <= today) {
+        rowClass = 'class="expired"';
+      }
+
       html += `
-        <tr>
+        <tr ${rowClass}>
           <td>${r.Name}</td>
           <td>${r["Account Number"]}</td>
           <td>${r["Start Date"]}</td>
@@ -84,7 +114,8 @@ fetch("https://script.google.com/macros/s/AKfycbzv4ytZz4u-xz1GFJI7r87DvS_6MtV8gy
         </tr>`;
     });
     document.getElementById("data").innerHTML = html;
-  });
+  })
+  .catch(err => console.error("Error fetching data: ", err));
 </script>
 
 </body>
