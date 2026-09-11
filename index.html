@@ -55,31 +55,8 @@
       padding: 14px;
       font-size: 16px;
       border-radius: 10px;
-      border: 2px solid #ccc;
+      border: 1px solid #ccc;
       box-sizing: border-box;
-      transition: all 0.3s ease;
-    }
-
-    /* Color States for Ending Date Input */
-    input.status-red {
-      background-color: #ffe6e6 !important;
-      border-color: #e74c3c !important;
-      color: #c0392b !important;
-      font-weight: bold;
-    }
-
-    input.status-orange {
-      background-color: #fff3e0 !important;
-      border-color: #f39c12 !important;
-      color: #d35400 !important;
-      font-weight: bold;
-    }
-
-    input.status-green {
-      background-color: #e8f8f5 !important;
-      border-color: #2ecc71 !important;
-      color: #27ae60 !important;
-      font-weight: bold;
     }
 
     button {
@@ -169,38 +146,12 @@
     const startDateInput = document.getElementById("startDate");
     const endDateInput = document.getElementById("endDate");
 
-    function applyDateStatusColor(targetDateString) {
-      // Clear existing classes
-      endDateInput.classList.remove("status-red", "status-orange", "status-green");
-
-      // Normalize today's date to midnight for accurate day calculations
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      // Parse the end date string (YYYY-MM-DD) as midnight local time
-      const parts = targetDateString.split('-');
-      const endDate = new Date(parts[0], parts[1] - 1, parts[2]);
-
-      // Calculate difference in milliseconds and convert to whole days
-      const diffTime = endDate.getTime() - today.getTime();
-      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (daysRemaining < 0) {
-        // Expired/Passed end date
-        endDateInput.classList.add("status-red");
-      } else if (daysRemaining <= 60) {
-        // Within 60 days of completion (Near complete)
-        endDateInput.classList.add("status-orange");
-      } else {
-        // More than 60 days remaining
-        endDateInput.classList.add("status-green");
-      }
-    }
-
+    // Logic to auto-calculate end date when Start Date is selected
     startDateInput.addEventListener("change", function() {
-      if (this.value) {
-        const parts = this.value.split('-');
-        let endDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      const selectedDate = new Date(this.value);
+      
+      if (!isNaN(selectedDate.getTime())) {
+        let endDate = new Date(selectedDate);
         
         // Add 18 months
         endDate.setMonth(endDate.getMonth() + 18);
@@ -212,14 +163,9 @@
         const month = String(endDate.getMonth() + 1).padStart(2, '0');
         const day = String(endDate.getDate()).padStart(2, '0');
         
-        const formattedEndDate = `${year}-${month}-${day}`;
-        endDateInput.value = formattedEndDate;
-
-        // Apply visual color status
-        applyDateStatusColor(formattedEndDate);
+        endDateInput.value = `${year}-${month}-${day}`;
       } else {
         endDateInput.value = "";
-        endDateInput.classList.remove("status-red", "status-orange", "status-green");
       }
     });
 
@@ -244,8 +190,7 @@
       .then(() => {
         statusText.innerText = "Submitted successfully ✅";
         form.reset();
-        endDateInput.value = ""; 
-        endDateInput.classList.remove("status-red", "status-orange", "status-green");
+        endDateInput.value = ""; // Clear the readonly field manually
         setTimeout(() => statusText.style.display = "none", 3000);
       })
       .catch(() => {
