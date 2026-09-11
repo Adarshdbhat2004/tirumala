@@ -42,46 +42,35 @@
       color: #334155;
     }
 
-    /* 1. Red State: Completed / Expired */
-    .expired {
-      background-color: #fee2e2 !important; /* Soft light red */
+    /* 1. Red: Expired / Completed */
+    tr.expired {
+      background-color: #fee2e2 !important;
     }
-    .expired td {
-      color: #dc2626 !important; /* Bold red text */
+    tr.expired td {
+      color: #dc2626 !important;
       font-weight: 600;
-    }
-    .expired:hover {
-      background-color: #fca5a5 !important;
     }
 
-    /* 2. Orange State: Within 60 Days */
-    .warning {
-      background-color: #ffedd5 !important; /* Soft light orange */
+    /* 2. Orange: Near Completion (Within 60 Days) */
+    tr.warning {
+      background-color: #ffedd5 !important;
     }
-    .warning td {
-      color: #ea580c !important; /* Bold orange text */
+    tr.warning td {
+      color: #ea580c !important;
       font-weight: 600;
-    }
-    .warning:hover {
-      background-color: #fed7aa !important;
     }
 
-    /* 3. Green State: More than 60 Days */
-    .active {
-      background-color: #dcfce7 !important; /* Soft light green */
+    /* 3. Green: Time Remaining (> 60 Days) */
+    tr.active {
+      background-color: #dcfce7 !important;
     }
-    .active td {
-      color: #16a34a !important; /* Bold green text */
+    tr.active td {
+      color: #16a34a !important;
       font-weight: 600;
-    }
-    .active:hover {
-      background-color: #bbf7d0 !important;
     }
 
     @media (max-width: 768px) {
-      table {
-        width: 100%;
-      }
+      table { width: 100%; }
     }
   </style>
 </head>
@@ -103,53 +92,69 @@
 </table>
 
 <script>
-// Normalize today's date to midnight for accurate calculation
+// Helper function to safely convert string formats to Date
+function parseCustomDate(dateStr) {
+  if (!dateStr) return null;
+  
+  // Handle ISO YYYY-MM-DD
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+  }
+  
+  // Handle DD/MM/YYYY or MM/DD/YYYY
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
+  }
+
+  const fallbackDate = new Date(dateStr);
+  return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
+}
+
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
 fetch("https://script.google.com/macros/s/AKfycbzv4ytZz4u-xz1GFJI7r87DvS_6MtV8gyNR1rUpcRlCsQ38sNR1oS3fKfyfd28PU8n2/exec")
   .then(res => res.json())
   .then(data => {
-    // Sort data in ascending order based on Start Date
-    data.sort((a, b) => new Date(a["Start Date"]) - new Date(b["Start Date"]));
-
     let html = "";
     
     data.forEach(r => {
       let rowClass = "";
+      const endDateVal = r["End Date"] || r["endDate"];
+      const endDate = parseCustomDate(endDateVal);
       
-      if (r["End Date"]) {
-        // Parse the End Date string (YYYY-MM-DD or standard date format)
-        const endDate = new Date(r["End Date"]);
+      if (endDate) {
         endDate.setHours(0, 0, 0, 0);
         
-        if (!isNaN(endDate.getTime())) {
-          // Calculate difference in whole days
-          const diffTime = endDate.getTime() - today.getTime();
-          const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        // Calculate difference in whole days
+        const diffTime = endDate.getTime() - today.getTime();
+        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-          if (daysRemaining < 0) {
-            // Completed / Expired -> RED
-            rowClass = 'class="expired"';
-          } else if (daysRemaining <= 60) {
-            // Near complete (Within 60 days) -> ORANGE
-            rowClass = 'class="warning"';
-          } else {
-            // Active (More than 60 days remaining) -> GREEN
-            rowClass = 'class="active"';
-          }
+        if (daysRemaining < 0) {
+          rowClass = 'class="expired"'; // RED: Completed / Passed
+        } else if (daysRemaining <= 60) {
+          rowClass = 'class="warning"'; // ORANGE: Near end (Within 60 days)
+        } else {
+          rowClass = 'class="active"';  // GREEN: > 60 days remaining
         }
       }
 
       html += `
         <tr ${rowClass}>
-          <td>${r.Name || ''}</td>
-          <td>${r["Account Number"] || ''}</td>
-          <td>${r["Start Date"] || ''}</td>
-          <td>${r["End Date"] || ''}</td>
-          <td>${r.Plan || ''}</td>
+          <td>${r.Name || r.name || ''}</td>
+          <td>${r["Account Number"] || r.accountNumber || ''}</td>
+          <td>${r["Start Date"] || r.startDate || ''}</td>
+          <td>${r["End Date"] || r.endDate || ''}</td>
+          <td>${r.Plan || r.plan || ''}</td>
         </tr>`;
     });
+    
     document.getElementById("data").innerHTML = html;
   })
   .catch(err => console.error("Error fetching data: ", err));
