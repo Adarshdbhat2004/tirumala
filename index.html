@@ -55,8 +55,31 @@
       padding: 14px;
       font-size: 16px;
       border-radius: 10px;
-      border: 1px solid #ccc;
+      border: 2px solid #ccc;
       box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+
+    /* Status Color Classes for Ending Date */
+    input.status-red {
+      background-color: #ffe6e6;
+      border-color: #e74c3c;
+      color: #c0392b;
+      font-weight: bold;
+    }
+
+    input.status-orange {
+      background-color: #fff3e0;
+      border-color: #f39c12;
+      color: #d35400;
+      font-weight: bold;
+    }
+
+    input.status-green {
+      background-color: #e8f8f5;
+      border-color: #2ecc71;
+      color: #27ae60;
+      font-weight: bold;
     }
 
     button {
@@ -146,6 +169,28 @@
     const startDateInput = document.getElementById("startDate");
     const endDateInput = document.getElementById("endDate");
 
+    function applyDateStatusColor(endDate) {
+      const today = new Date();
+      
+      // Clear previous classes
+      endDateInput.classList.remove("status-red", "status-orange", "status-green");
+
+      // Calculate difference in days
+      const timeDiff = endDate.getTime() - today.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+      if (daysDiff < 0) {
+        // Expired/Completed
+        endDateInput.classList.add("status-red");
+      } else if (daysDiff <= 30) {
+        // Near to complete (within 30 days)
+        endDateInput.classList.add("status-orange");
+      } else {
+        // Active/Time remaining
+        endDateInput.classList.add("status-green");
+      }
+    }
+
     // Logic to auto-calculate end date when Start Date is selected
     startDateInput.addEventListener("change", function() {
       const selectedDate = new Date(this.value);
@@ -164,8 +209,12 @@
         const day = String(endDate.getDate()).padStart(2, '0');
         
         endDateInput.value = `${year}-${month}-${day}`;
+
+        // Apply visual status color
+        applyDateStatusColor(endDate);
       } else {
         endDateInput.value = "";
+        endDateInput.classList.remove("status-red", "status-orange", "status-green");
       }
     });
 
@@ -190,7 +239,8 @@
       .then(() => {
         statusText.innerText = "Submitted successfully ✅";
         form.reset();
-        endDateInput.value = ""; // Clear the readonly field manually
+        endDateInput.value = ""; 
+        endDateInput.classList.remove("status-red", "status-orange", "status-green");
         setTimeout(() => statusText.style.display = "none", 3000);
       })
       .catch(() => {
