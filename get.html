@@ -96,7 +96,6 @@
 function parseCustomDate(dateStr) {
   if (!dateStr) return null;
   
-  // Handle ISO YYYY-MM-DD
   if (dateStr.includes('-')) {
     const parts = dateStr.split('-');
     if (parts.length === 3) {
@@ -104,7 +103,6 @@ function parseCustomDate(dateStr) {
     }
   }
   
-  // Handle DD/MM/YYYY or MM/DD/YYYY
   if (dateStr.includes('/')) {
     const parts = dateStr.split('/');
     if (parts.length === 3) {
@@ -116,37 +114,61 @@ function parseCustomDate(dateStr) {
   return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
 }
 
+// Function to calculate status and priority rank
+function getRowStatus(row, today) {
+  const endDateVal = row["End Date"] || row["endDate"];
+  const endDate = parseCustomDate(endDateVal);
+  
+  if (!endDate) {
+    return { class: '', rank: 4 }; // Default for missing dates
+  }
+
+  endDate.setHours(0, 0, 0, 0);
+  const diffTime = endDate.getTime() - today.getTime();
+  const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (daysRemaining < 0) {
+    return { class: 'expired', rank: 1 }; // RED
+  } else if (daysRemaining <= 60) {
+    return { class: 'warning', rank: 2 }; // ORANGE
+  } else {
+    return { class: 'active', rank: 3 };  // GREEN
+  }
+}
+
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
 fetch("https://script.google.com/macros/s/AKfycbzv4ytZz4u-xz1GFJI7r87DvS_6MtV8gyNR1rUpcRlCsQ38sNR1oS3fKfyfd28PU8n2/exec")
   .then(res => res.json())
   .then(data => {
-    let html = "";
-    
-    data.forEach(r => {
-      let rowClass = "";
-      const endDateVal = r["End Date"] || r["endDate"];
-      const endDate = parseCustomDate(endDateVal);
-      
-      if (endDate) {
-        endDate.setHours(0, 0, 0, 0);
-        
-        // Calculate difference in whole days
-        const diffTime = endDate.getTime() - today.getTime();
-        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // 1. Process each item and attach status class & priority rank
+    const processedData = data.map(r => {
+      const statusInfo = getRowStatus(r, today);
+      return {
+        ...r,
+        statusClass: statusInfo.class,
+        rank: statusInfo.rank
+      };
+    });
 
-        if (daysRemaining < 0) {
-          rowClass = 'class="expired"'; // RED: Completed / Passed
-        } else if (daysRemaining <= 60) {
-          rowClass = 'class="warning"'; // ORANGE: Near end (Within 60 days)
-        } else {
-          rowClass = 'class="active"';  // GREEN: > 60 days remaining
-        }
+    // 2. Sort data: Priority Rank first (Red -> Orange -> Green), then by End Date
+    processedData.sort((a, b) => {
+      if (a.rank !== b.rank) {
+        return a.rank - b.rank; // Priority order: 1 (Red), 2 (Orange), 3 (Green)
       }
+      // Optional tie-breaker: sort by End Date within the same color group
+      const dateA = parseCustomDate(a["End Date"] || a["endDate"]);
+      const dateB = parseCustomDate(b["End Date"] || b["endDate"]);
+      return (dateA || 0) - (dateB || 0);
+    });
 
+    // 3. Render HTML
+    let html = "";
+    processedData.forEach(r => {
+      const rowClassAttr = r.statusClass ? `class="${r.statusClass}"` : '';
       html += `
-        <tr ${rowClass}>
+        <tr ${rowClassAttr}>
           <td>${r.Name || r.name || ''}</td>
           <td>${r["Account Number"] || r.accountNumber || ''}</td>
           <td>${r["Start Date"] || r.startDate || ''}</td>
